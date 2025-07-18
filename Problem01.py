@@ -71,6 +71,3 @@ def ReverseSequence(Sequence):
     return ReverseSequence
 
 DnaABox = FrequentWords(Sequence.upper(),9)[0]
-
-print(f"Occurences of '{DnaABox}':")
-print(DensePatterns(Genome, 500, 9))
