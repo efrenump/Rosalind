@@ -71,3 +71,4 @@ def ReverseSequence(Sequence):
     return ReverseSequence
 
 DnaABox = FrequentWords(Sequence.upper(),9)[0]
+print(DnaABox)
