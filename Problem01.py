@@ -6,7 +6,8 @@ import time
 Genome = ""
 
 Nucleotides = "ACGT"
-NucleotideTable = str.maketrans(Nucleotides, "0123")
+NucleotidesInt = "0123"
+NucleotideTable = str.maketrans(Nucleotides, NucleotidesInt)
 
 for seq_record in SeqIO.parse("Escherichia coli DNA.fasta", "fasta"):
     Genome += str(seq_record.seq)
@@ -108,10 +109,19 @@ def DenseWords(Text, k, t, L):
 
 CompNucleotideTable = str.maketrans(Nucleotides, Nucleotides[::-1])
 
-def ReverseSequence(Sequence):
+def ReverseSequenceStr(Sequence):
     ReverseSequence = Sequence.translate(CompNucleotideTable)
     
     return ReverseSequence[::-1]
+
+CompNucleotideTableInt = str.maketrans(NucleotidesInt, NucleotidesInt[::-1])
+
+def ReverseSequenceInt(Sequence, k):
+    Result = 0
+    for i in range(0, k):
+        Result = (Result << 2) | ((Sequence & 3) ^ 3)
+        Sequence >>= 2
+    return Result
 
 def SkewGC(Genome, i): #Increases in the forward (lagging) half-strand and decreases in the reverse (leading) half-strand
     return PatternCount(Genome[0:i].upper(), "G") - PatternCount(Genome[0:i].upper(), "C")
@@ -197,6 +207,34 @@ def ApproximatePatternCount(Text, Pattern, d): ##Work with numbers instead of st
                 
     return Count
 
+def ComputeApproximateFrequencies(Text, k, d):
+    ApproximateFrequencies = [0] * 4**k
+
+    Frequencies = [0] * 4**k
+
+    Mask = len(Frequencies) - 1
+
+    Pattern = PatternToNumber(Text[0:k])
+    Frequencies[Pattern] += 1
+    Seen = []
+    SeenFlag = [0] * 4**k
+
+    SeenFlag[Pattern] = 1
+    Seen.append(Pattern)
+
+    for i in range(k,len(Text)):
+        Pattern = ((Pattern << 2) | PatternToNumber(Text[i])) & Mask  
+        Frequencies[Pattern] += 1
+        if SeenFlag[Pattern] == 0:
+            SeenFlag[Pattern] = 1
+            Seen.append(Pattern)
+
+    for i in Seen:
+        for j in NeighborsInt(i, k, d):
+            ApproximateFrequencies[j] += Frequencies[i]
+
+    return ApproximateFrequencies
+
 def FrequentApproximateWords(Text, k, d):
     ApproximateFrequencies = [0] * 4**k
 
@@ -236,18 +274,41 @@ def FrequentApproximateWords(Text, k, d):
 
     return [NumberToPattern(i,k) for i in MostFrequent]
 
-start = time.time()
-print(FrequentApproximateWords(Genome, 9, 1))
-end = time.time()
-print(end - start)
+def FrequentApproximateComplementaryWords(Text, k, d):
+    Frequencies = ComputeApproximateFrequencies(Text, k, d)
+    ComplementaryFrequencies = [0] * 4**k
 
-'''SkewArray = SkewGCArray(Genome)
+    Max = 0
+    MostFrequent = []
+
+    for i in range(0, 4**k):
+        Reverse = ReverseSequenceInt(i, k)
+        ComplementaryFrequencies[i] = Frequencies[i]
+        if Reverse != i:
+            ComplementaryFrequencies[i] += Frequencies[Reverse]
+
+        Count = ComplementaryFrequencies[i]
+        if Count > Max:
+            Max = Count
+            MostFrequent = [i]
+        elif Count == Max:
+            MostFrequent.append(i)
+
+    return [NumberToPattern(i, k) for i in MostFrequent]
+
+SkewArray = SkewGCArray(Genome)
 MinSkewY = min(SkewArray)
 MinSkewX = [i for i, v in enumerate(SkewArray) if v == MinSkewY]
+print(MinSkewX)
 
 fig, ax = plt.subplots()
 ax.plot(SkewArray)
 ax.vlines(MinSkewX[0], 0, 1, transform=ax.get_xaxis_transform(), colors="red")
 
-plt.show()'''
+start = time.time()
+print(FrequentApproximateComplementaryWords(Genome[MinSkewX[0]-100:MinSkewX[0]+400], 9, 1))
+end = time.time()
+print(end - start)
+
+plt.show()
 
